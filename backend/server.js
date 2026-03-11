@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-const connectDB = require('./config/db');
+const { initSheet } = require('./config/googleSheets');
 const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
@@ -16,8 +16,8 @@ const userRoutes = require('./routes/userRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 
-// Connect to Database
-connectDB();
+// Connect to Google Sheets
+initSheet().catch(err => console.error('Failed to init sheets:', err));
 
 const app = express();
 

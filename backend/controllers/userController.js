@@ -1,13 +1,38 @@
-const User = require('../models/User');
-const Course = require('../models/Course');
+const { getAllRows, findRow, updateRow, deleteRow } = require('../config/googleSheets');
+
+// Helper to parse user
+const parseUser = async (user, includeRelations = false) => {
+  if (!user) return null;
+  const parsed = { ...user };
+  parsed._id = user.id;
+  parsed.wishlist = JSON.parse(user.wishlist || '[]');
+  parsed.purchasedCourses = JSON.parse(user.purchasedCourses || '[]');
+  
+  if (includeRelations) {
+    // Populate wishlist courses
+    const allCourses = await getAllRows('Courses');
+    parsed.wishlist = parsed.wishlist.map(id => {
+      const c = allCourses.find(row => row.id === id);
+      return c ? { _id: c.id, ...c, price: Number(c.price) } : null;
+    }).filter(c => c !== null);
+
+    // Populate purchased courses
+    parsed.purchasedCourses = parsed.purchasedCourses.map(id => {
+      const c = allCourses.find(row => row.id === id);
+      return c ? { _id: c.id, ...c, price: Number(c.price) } : null;
+    }).filter(c => c !== null);
+  }
+  return parsed;
+};
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('purchasedCourses')
-      .populate('wishlist');
+    const userRow = await findRow('Users', row => row.get('id') === req.user.id);
+    if (!userRow) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const user = await parseUser(userRow.toObject(), true);
     res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -19,12 +44,10 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { name, bio, avatar } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, bio, avatar },
-      { new: true, runValidators: true }
-    );
-    res.json({ success: true, user });
+    const updated = await updateRow('Users', row => row.get('id') === req.user.id, { name, bio, avatar });
+    if (!updated) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    res.json({ success: true, user: await parseUser(updated) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -34,22 +57,27 @@ exports.updateProfile = async (req, res) => {
 // @route   POST /api/users/wishlist/:courseId
 exports.toggleWishlist = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const userRow = await findRow('Users', row => row.get('id') === req.user.id);
+    const userData = userRow.toObject();
+    const wishlist = JSON.parse(userData.wishlist || '[]');
     const courseId = req.params.courseId;
 
-    const index = user.wishlist.indexOf(courseId);
+    const index = wishlist.indexOf(courseId);
     if (index > -1) {
-      user.wishlist.splice(index, 1);
+      wishlist.splice(index, 1);
     } else {
-      user.wishlist.push(courseId);
+      wishlist.push(courseId);
     }
 
-    await user.save();
-    const updatedUser = await User.findById(req.user._id).populate('wishlist');
+    const updated = await updateRow('Users', r => r.get('id') === req.user.id, {
+      wishlist: JSON.stringify(wishlist)
+    });
+
+    const finalUser = await parseUser(updated, true);
     
     res.json({ 
       success: true, 
-      wishlist: updatedUser.wishlist,
+      wishlist: finalUser.wishlist,
       message: index > -1 ? 'Removed from wishlist' : 'Added to wishlist'
     });
   } catch (error) {
@@ -58,11 +86,12 @@ exports.toggleWishlist = async (req, res) => {
 };
 
 // @desc    Get all users (Admin)
-// @route   GET /api/users
+// @route   GET /api/users/admin/all
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 });
-    res.json({ success: true, users });
+    const users = await getAllRows('Users');
+    const parsedUsers = await Promise.all(users.map(u => parseUser(u)));
+    res.json({ success: true, users: parsedUsers.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -72,11 +101,10 @@ exports.getAllUsers = async (req, res) => {
 // @route   DELETE /api/users/:id
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
+    const deleted = await deleteRow('Users', row => row.get('id') === req.params.id);
+    if (!deleted) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    await User.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

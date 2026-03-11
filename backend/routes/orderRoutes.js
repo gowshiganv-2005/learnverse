@@ -6,6 +6,7 @@ const { protect, admin } = require('../middleware/auth');
 router.post('/', protect, purchaseCourse);
 router.get('/my', protect, getMyOrders);
 router.get('/stats', protect, admin, getStats);
+router.get('/admin/all', protect, admin, getAllOrders);
 router.get('/', protect, admin, getAllOrders);
 
 module.exports = router;

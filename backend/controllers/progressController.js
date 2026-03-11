@@ -1,30 +1,39 @@
-const Progress = require('../models/Progress');
-const Lesson = require('../models/Lesson');
+const { v4: uuidv4 } = require('uuid');
+const { getAllRows, findRow, addRow, updateRow } = require('../config/googleSheets');
+
+// Helper to parse progress
+const parseProgress = (progress) => {
+  if (!progress) return null;
+  const parsed = { ...progress };
+  parsed._id = progress.id;
+  parsed.completedLessons = JSON.parse(progress.completedLessons || '[]');
+  parsed.progressPercent = Number(progress.progressPercent || 0);
+  return parsed;
+};
 
 // @desc    Get progress for a course
 // @route   GET /api/progress/:courseId
 exports.getProgress = async (req, res) => {
   try {
-    let progress = await Progress.findOne({
-      userId: req.user._id,
-      courseId: req.params.courseId
-    });
+    let progressRow = await findRow('Progress', row => 
+      row.get('userId') === req.user.id && row.get('courseId') === req.params.courseId
+    );
 
-    if (!progress) {
+    if (!progressRow) {
       // Create initial progress
-      const firstLesson = await Lesson.findOne({ courseId: req.params.courseId })
-        .sort({ moduleIndex: 1, order: 1 });
-
-      progress = await Progress.create({
-        userId: req.user._id,
+      const progressData = {
+        id: uuidv4(),
+        userId: req.user.id,
         courseId: req.params.courseId,
-        currentLesson: firstLesson?._id,
-        completedLessons: [],
-        progressPercent: 0
-      });
+        completedLessons: JSON.stringify([]),
+        progressPercent: 0,
+        createdAt: new Date().toISOString()
+      };
+      await addRow('Progress', progressData);
+      return res.json({ success: true, progress: parseProgress(progressData) });
     }
 
-    res.json({ success: true, progress });
+    res.json({ success: true, progress: parseProgress(progressRow.toObject()) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -36,34 +45,43 @@ exports.markLessonCompleted = async (req, res) => {
   try {
     const { courseId, lessonId } = req.params;
 
-    let progress = await Progress.findOne({
-      userId: req.user._id,
-      courseId
-    });
+    let progressRow = await findRow('Progress', row => 
+      row.get('userId') === req.user.id && row.get('courseId') === courseId
+    );
 
-    if (!progress) {
-      progress = await Progress.create({
-        userId: req.user._id,
+    let progressData;
+    if (!progressRow) {
+      progressData = {
+        id: uuidv4(),
+        userId: req.user.id,
         courseId,
-        completedLessons: [lessonId],
-        currentLesson: lessonId
-      });
+        completedLessons: JSON.stringify([lessonId]),
+        progressPercent: 0,
+        createdAt: new Date().toISOString()
+      };
+      await addRow('Progress', progressData);
     } else {
-      if (!progress.completedLessons.includes(lessonId)) {
-        progress.completedLessons.push(lessonId);
+      progressData = progressRow.toObject();
+      const completed = JSON.parse(progressData.completedLessons || '[]');
+      if (!completed.includes(lessonId)) {
+        completed.push(lessonId);
       }
-      progress.currentLesson = lessonId;
-      progress.lastAccessedAt = new Date();
+      
+      // Calculate progress percentage
+      const allLessons = await getAllRows('Lessons');
+      const courseLessons = allLessons.filter(l => l.courseId === courseId);
+      const percent = courseLessons.length > 0
+        ? Math.round((completed.length / courseLessons.length) * 100)
+        : 0;
+
+      const updated = await updateRow('Progress', r => r.get('id') === progressData.id, {
+        completedLessons: JSON.stringify(completed),
+        progressPercent: percent
+      });
+      progressData = updated;
     }
 
-    // Calculate progress percentage
-    const totalLessons = await Lesson.countDocuments({ courseId });
-    progress.progressPercent = totalLessons > 0
-      ? Math.round((progress.completedLessons.length / totalLessons) * 100)
-      : 0;
-
-    await progress.save();
-    res.json({ success: true, progress });
+    res.json({ success: true, progress: parseProgress(progressData) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -73,11 +91,22 @@ exports.markLessonCompleted = async (req, res) => {
 // @route   GET /api/progress
 exports.getAllProgress = async (req, res) => {
   try {
-    const progress = await Progress.find({ userId: req.user._id })
-      .populate('courseId')
-      .populate('currentLesson')
-      .sort({ lastAccessedAt: -1 });
-    res.json({ success: true, progress });
+    let allProgress = await getAllRows('Progress');
+    allProgress = allProgress.filter(p => p.userId === req.user.id);
+    
+    // Populate course details
+    const courses = await getAllRows('Courses');
+    
+    const populated = allProgress.map(p => {
+      const parsed = parseProgress(p);
+      const course = courses.find(c => c.id === p.courseId);
+      if (course) {
+        parsed.courseId = { _id: course.id, title: course.title, thumbnail: course.thumbnail };
+      }
+      return parsed;
+    });
+
+    res.json({ success: true, progress: populated });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

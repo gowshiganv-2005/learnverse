@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { findRow } = require('../config/googleSheets');
 
 // Protect routes - verify JWT token
 const protect = async (req, res, next) => {
@@ -15,10 +15,15 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id);
-    if (!req.user) {
+    const userRow = await findRow('Users', row => row.get('id') === decoded.id);
+    
+    if (!userRow) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
+
+    const userData = userRow.toObject();
+    userData._id = userData.id; // Maintain compatibility
+    req.user = userData;
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Not authorized, token invalid' });

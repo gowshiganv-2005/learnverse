@@ -1,47 +1,79 @@
-const Order = require('../models/Order');
-const Course = require('../models/Course');
-const User = require('../models/User');
+const { v4: uuidv4 } = require('uuid');
+const { getAllRows, findRow, addRow, updateRow } = require('../config/googleSheets');
+
+// Helper to parse order
+const parseOrder = async (order, includeRelations = false) => {
+  if (!order) return null;
+  const parsed = { ...order };
+  parsed._id = order.id;
+  parsed.amount = Number(order.amount);
+  
+  if (includeRelations) {
+    const courseRow = await findRow('Courses', r => r.get('id') === order.courseId);
+    if (courseRow) {
+      const c = courseRow.toObject();
+      parsed.courseId = { _id: c.id, title: c.title, price: Number(c.price), thumbnail: c.thumbnail };
+    }
+    
+    const userRow = await findRow('Users', r => r.get('id') === order.userId);
+    if (userRow) {
+      const u = userRow.toObject();
+      parsed.userId = { _id: u.id, name: u.name, email: u.email };
+    }
+  }
+  return parsed;
+};
 
 // @desc    Purchase a course
 // @route   POST /api/orders
 exports.purchaseCourse = async (req, res) => {
   try {
     const { courseId } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     // Check if already purchased
-    const existingOrder = await Order.findOne({ userId, courseId, paymentStatus: 'completed' });
-    if (existingOrder) {
+    const existingOrderRow = await findRow('Orders', row => 
+      row.get('userId') === userId && row.get('courseId') === courseId
+    );
+    if (existingOrderRow) {
       return res.status(400).json({ success: false, message: 'Course already purchased' });
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
+    const courseRow = await findRow('Courses', row => row.get('id') === courseId);
+    if (!courseRow) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
+    const courseData = courseRow.toObject();
 
     // Create order
-    const order = await Order.create({
+    const orderData = {
+      id: uuidv4(),
       userId,
       courseId,
-      amount: course.price
-    });
+      amount: courseData.price,
+      createdAt: new Date().toISOString()
+    };
+    await addRow('Orders', orderData);
 
     // Add course to user's purchased courses
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { purchasedCourses: courseId }
-    });
+    const userRow = await findRow('Users', row => row.get('id') === userId);
+    if (userRow) {
+      const userData = userRow.toObject();
+      const purchased = JSON.parse(userData.purchasedCourses || '[]');
+      if (!purchased.includes(courseId)) {
+        purchased.push(courseId);
+        await updateRow('Users', r => r.get('id') === userId, {
+          purchasedCourses: JSON.stringify(purchased)
+        });
+      }
+    }
 
     // Increment enrolled students
-    await Course.findByIdAndUpdate(courseId, {
-      $inc: { enrolledStudents: 1 }
+    await updateRow('Courses', r => r.get('id') === courseId, {
+      enrolledStudents: Number(courseData.enrolledStudents || 0) + 1
     });
 
-    const populatedOrder = await Order.findById(order._id)
-      .populate('courseId')
-      .populate('userId', 'name email');
-
-    res.status(201).json({ success: true, order: populatedOrder });
+    res.status(201).json({ success: true, order: await parseOrder(orderData, true) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -51,34 +83,35 @@ exports.purchaseCourse = async (req, res) => {
 // @route   GET /api/orders/my
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.user._id })
-      .populate('courseId')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, orders });
+    let orders = await getAllRows('Orders');
+    orders = orders.filter(o => o.userId === req.user.id);
+    
+    const populatedOrders = await Promise.all(
+      orders.map(o => parseOrder(o, true))
+    );
+
+    res.json({ success: true, orders: populatedOrders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // @desc    Get all orders (Admin)
-// @route   GET /api/orders
+// @route   GET /api/orders/admin/all
 exports.getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
-      .populate('courseId', 'title price thumbnail')
-      .populate('userId', 'name email')
-      .sort({ createdAt: -1 });
+    const orders = await getAllRows('Orders');
+    const populatedOrders = await Promise.all(
+      orders.map(o => parseOrder(o, true))
+    );
 
-    // Calculate total revenue
-    const totalRevenue = orders
-      .filter(o => o.paymentStatus === 'completed')
-      .reduce((sum, order) => sum + (order.amount || 0), 0);
+    const totalRevenue = populatedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
 
     res.json({
       success: true,
-      orders,
+      orders: populatedOrders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)),
       totalRevenue,
-      totalOrders: orders.length
+      totalOrders: populatedOrders.length
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -86,43 +119,38 @@ exports.getAllOrders = async (req, res) => {
 };
 
 // @desc    Get revenue stats (Admin)
-// @route   GET /api/orders/stats
+// @route   GET /api/admin/stats
 exports.getStats = async (req, res) => {
   try {
-    const totalOrders = await Order.countDocuments({ paymentStatus: 'completed' });
-    const totalUsers = await User.countDocuments();
-    const totalCourses = await Course.countDocuments();
+    const orders = await getAllRows('Orders');
+    const users = await getAllRows('Users');
+    const courses = await getAllRows('Courses');
 
-    const revenueData = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' } },
-      { $group: { _id: null, totalRevenue: { $sum: '$amount' } } }
-    ]);
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+    
+    // Group monthly revenue
+    const monthlyRevenue = orders.reduce((acc, o) => {
+      const month = new Date(o.createdAt).getMonth() + 1;
+      const existing = acc.find(m => m._id === month);
+      if (existing) {
+        existing.revenue += Number(o.amount || 0);
+        existing.orders += 1;
+      } else {
+        acc.push({ _id: month, revenue: Number(o.amount || 0), orders: 1 });
+      }
+      return acc;
+    }, []).sort((a, b) => a._id - b._id);
 
-    const monthlyRevenue = await Order.aggregate([
-      { $match: { paymentStatus: 'completed' } },
-      {
-        $group: {
-          _id: { $month: '$createdAt' },
-          revenue: { $sum: '$amount' },
-          orders: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    const recentOrders = await Order.find({ paymentStatus: 'completed' })
-      .populate('courseId', 'title price thumbnail')
-      .populate('userId', 'name email')
-      .sort({ createdAt: -1 })
-      .limit(5);
+    const recentOrdersRaw = orders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+    const recentOrders = await Promise.all(recentOrdersRaw.map(o => parseOrder(o, true)));
 
     res.json({
       success: true,
       stats: {
-        totalRevenue: revenueData[0]?.totalRevenue || 0,
-        totalOrders,
-        totalUsers,
-        totalCourses,
+        totalRevenue,
+        totalOrders: orders.length,
+        totalUsers: users.length,
+        totalCourses: courses.length,
         monthlyRevenue,
         recentOrders
       }

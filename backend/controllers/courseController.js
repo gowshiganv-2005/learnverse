@@ -1,5 +1,22 @@
-const Course = require('../models/Course');
-const Lesson = require('../models/Lesson');
+const { v4: uuidv4 } = require('uuid');
+const { getAllRows, findRow, addRow, updateRow, deleteRow } = require('../config/googleSheets');
+
+// Helper to parse course data
+const parseCourse = (course) => {
+  if (!course) return null;
+  const parsed = { ...course };
+  parsed._id = course.id;
+  parsed.price = Number(course.price);
+  parsed.rating = Number(course.rating || 0);
+  parsed.numReviews = Number(course.numReviews || 0);
+  parsed.enrolledStudents = Number(course.enrolledStudents || 0);
+  parsed.featured = course.featured === 'TRUE' || course.featured === true;
+  parsed.published = course.published === 'TRUE' || course.published === true;
+  parsed.whatYouWillLearn = JSON.parse(course.whatYouWillLearn || '[]');
+  parsed.requirements = JSON.parse(course.requirements || '[]');
+  parsed.modules = JSON.parse(course.modules || '[]');
+  return parsed;
+};
 
 // @desc    Get all courses
 // @route   GET /api/courses
@@ -7,52 +24,46 @@ exports.getCourses = async (req, res) => {
   try {
     const { category, minPrice, maxPrice, rating, search, sort, page = 1, limit = 12 } = req.query;
     
-    let query = { published: true };
+    let courses = await getAllRows('Courses');
+    courses = courses.map(parseCourse).filter(c => c.published);
 
-    // Category filter
+    // Filters
     if (category && category !== 'all') {
-      query.category = category;
+      courses = courses.filter(c => c.category === category);
     }
-
-    // Price filter
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+    if (minPrice) {
+      courses = courses.filter(c => c.price >= Number(minPrice));
     }
-
-    // Rating filter
+    if (maxPrice) {
+      courses = courses.filter(c => c.price <= Number(maxPrice));
+    }
     if (rating) {
-      query.rating = { $gte: Number(rating) };
+      courses = courses.filter(c => c.rating >= Number(rating));
     }
-
-    // Search
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { instructor: { $regex: search, $options: 'i' } }
-      ];
+      const s = search.toLowerCase();
+      courses = courses.filter(c => 
+        c.title.toLowerCase().includes(s) || 
+        c.description.toLowerCase().includes(s) || 
+        c.instructor.toLowerCase().includes(s)
+      );
     }
 
     // Sort
-    let sortOption = { createdAt: -1 };
-    if (sort === 'price-low') sortOption = { price: 1 };
-    if (sort === 'price-high') sortOption = { price: -1 };
-    if (sort === 'rating') sortOption = { rating: -1 };
-    if (sort === 'popular') sortOption = { enrolledStudents: -1 };
-    if (sort === 'newest') sortOption = { createdAt: -1 };
+    if (sort === 'price-low') courses.sort((a, b) => a.price - b.price);
+    else if (sort === 'price-high') courses.sort((a, b) => b.price - a.price);
+    else if (sort === 'rating') courses.sort((a, b) => b.rating - a.rating);
+    else if (sort === 'popular') courses.sort((a, b) => b.enrolledStudents - a.enrolledStudents);
+    else courses.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const total = await Course.countDocuments(query);
-    const courses = await Course.find(query)
-      .sort(sortOption)
-      .skip(skip)
-      .limit(Number(limit));
+    // Pagination
+    const total = courses.length;
+    const startIndex = (Number(page) - 1) * Number(limit);
+    const paginatedCourses = courses.slice(startIndex, startIndex + Number(limit));
 
     res.json({
       success: true,
-      courses,
+      courses: paginatedCourses,
       pagination: {
         page: Number(page),
         limit: Number(limit),
@@ -69,9 +80,12 @@ exports.getCourses = async (req, res) => {
 // @route   GET /api/courses/featured
 exports.getFeaturedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ featured: true, published: true })
-      .sort({ rating: -1 })
-      .limit(8);
+    let courses = await getAllRows('Courses');
+    courses = courses
+      .map(parseCourse)
+      .filter(c => c.featured && c.published)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 8);
     res.json({ success: true, courses });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -82,11 +96,19 @@ exports.getFeaturedCourses = async (req, res) => {
 // @route   GET /api/courses/categories
 exports.getCategories = async (req, res) => {
   try {
-    const categories = await Course.aggregate([
-      { $match: { published: true } },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } }
-    ]);
+    let courses = await getAllRows('Courses');
+    courses = courses.map(parseCourse).filter(c => c.published);
+    
+    const categoryCounts = courses.reduce((acc, course) => {
+      acc[course.category] = (acc[course.category] || 0) + 1;
+      return acc;
+    }, {});
+
+    const categories = Object.keys(categoryCounts).map(cat => ({
+      _id: cat,
+      count: categoryCounts[cat]
+    })).sort((a, b) => b.count - a.count);
+
     res.json({ success: true, categories });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -97,15 +119,16 @@ exports.getCategories = async (req, res) => {
 // @route   GET /api/courses/:id
 exports.getCourse = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id)
-      .populate({
-        path: 'modules.lessons',
-        model: 'Lesson'
-      });
-
-    if (!course) {
+    const courseRow = await findRow('Courses', row => row.get('id') === req.params.id);
+    if (!courseRow) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
+
+    const course = parseCourse(courseRow.toObject());
+    
+    // In a real app, you might want to fetch lessons related to this course
+    // and attach them to modules. For now, we'll return the course as is.
+    // The modules field already contains some structure.
 
     res.json({ success: true, course });
   } catch (error) {
@@ -117,8 +140,20 @@ exports.getCourse = async (req, res) => {
 // @route   POST /api/courses
 exports.createCourse = async (req, res) => {
   try {
-    const course = await Course.create(req.body);
-    res.status(201).json({ success: true, course });
+    const courseData = {
+      ...req.body,
+      id: uuidv4(),
+      rating: 0,
+      numReviews: 0,
+      enrolledStudents: 0,
+      whatYouWillLearn: JSON.stringify(req.body.whatYouWillLearn || []),
+      requirements: JSON.stringify(req.body.requirements || []),
+      modules: JSON.stringify(req.body.modules || []),
+      createdAt: new Date().toISOString()
+    };
+
+    await addRow('Courses', courseData);
+    res.status(201).json({ success: true, course: parseCourse(courseData) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -128,16 +163,17 @@ exports.createCourse = async (req, res) => {
 // @route   PUT /api/courses/:id
 exports.updateCourse = async (req, res) => {
   try {
-    const course = await Course.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
+    const updateData = { ...req.body };
+    if (updateData.whatYouWillLearn) updateData.whatYouWillLearn = JSON.stringify(updateData.whatYouWillLearn);
+    if (updateData.requirements) updateData.requirements = JSON.stringify(updateData.requirements);
+    if (updateData.modules) updateData.modules = JSON.stringify(updateData.modules);
 
-    if (!course) {
+    const updated = await updateRow('Courses', row => row.get('id') === req.params.id, updateData);
+    if (!updated) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    res.json({ success: true, course });
+    res.json({ success: true, course: parseCourse(updated) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -147,14 +183,18 @@ exports.updateCourse = async (req, res) => {
 // @route   DELETE /api/courses/:id
 exports.deleteCourse = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
-    if (!course) {
+    const deleted = await deleteRow('Courses', row => row.get('id') === req.params.id);
+    if (!deleted) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    // Delete all lessons associated with the course
-    await Lesson.deleteMany({ courseId: course._id });
-    await Course.findByIdAndDelete(req.params.id);
+    // Optional: Delete related lessons
+    const lessons = await getAllRows('Lessons');
+    for (const lesson of lessons) {
+      if (lesson.courseId === req.params.id) {
+        await deleteRow('Lessons', r => r.get('id') === lesson.id);
+      }
+    }
 
     res.json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
@@ -166,7 +206,8 @@ exports.deleteCourse = async (req, res) => {
 // @route   GET /api/courses/admin/all
 exports.getAdminCourses = async (req, res) => {
   try {
-    const courses = await Course.find().sort({ createdAt: -1 });
+    let courses = await getAllRows('Courses');
+    courses = courses.map(parseCourse).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     res.json({ success: true, courses });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
