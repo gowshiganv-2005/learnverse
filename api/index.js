@@ -7,7 +7,7 @@ try {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       success: false,
-      error: 'API Initialization Failed - Trapped',
+      error: 'API Trapped V2',
       message: error.message,
       stack: error.stack
     }));
