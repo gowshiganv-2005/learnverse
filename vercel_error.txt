@@ -1,0 +1,6 @@
+{
+  "success": false,
+  "error": "API Initialization Failed",
+  "message": "require() of ES Module /var/task/backend/node_modules/uuid/dist-node/index.js from /var/task/backend/server.js not supported.\nInstead change the require of index.js in /var/task/backend/server.js to a dynamic import() which is available in all CommonJS modules.",
+  "stack": "Error [ERR_REQUIRE_ESM]: require() of ES Module /var/task/backend/node_modules/uuid/dist-node/index.js from /var/task/backend/server.js not supported.\nInstead change the require of index.js in /var/task/backend/server.js to a dynamic import() which is available in all CommonJS modules.\n    at /opt/rust/nodejs.js:2:13531\n    at Module.pn (/opt/rust/nodejs.js:2:13909)\n    at Xe.e.<computed>.Ye._load (/opt/rust/nodejs.js:2:13501)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)"
+}

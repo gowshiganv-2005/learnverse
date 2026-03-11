@@ -3,7 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 
 // Node.js environment variables are handled automatically on Vercel
 if (process.env.NODE_ENV !== 'production') {
