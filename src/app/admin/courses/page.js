@@ -9,7 +9,6 @@ import {
   HiOutlineTrash, 
   HiOutlineEye,
   HiOutlineSearch,
-  HiOutlineDotsHorizontal
 } from 'react-icons/hi';
 import API from '@/utils/api';
 import { formatPrice } from '@/utils/helpers';
@@ -17,11 +16,13 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 export default function AdminCoursesPage() {
+  const [mounted, setMounted] = useState(false);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    setMounted(true);
     fetchCourses();
   }, []);
 
@@ -32,7 +33,8 @@ export default function AdminCoursesPage() {
         setCourses(data.courses);
       }
     } catch (err) {
-      toast.error('Failed to load courses');
+      // Avoid toast on mount if it's SSR phase (though guards prevent this)
+      if (typeof window !== 'undefined') toast.error('Failed to load courses');
     } finally {
       setLoading(false);
     }
@@ -50,6 +52,10 @@ export default function AdminCoursesPage() {
       toast.error('Failed to delete course');
     }
   };
+
+  if (!mounted) {
+    return <LoadingSpinner text="Preparing course directory..." />;
+  }
 
   const filteredCourses = courses.filter(c => 
     c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -84,7 +90,7 @@ export default function AdminCoursesPage() {
         </div>
 
         {loading ? (
-          <LoadingSpinner text="Fetching course directory..." />
+          <LoadingSpinner text="Fetching courses..." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -99,8 +105,8 @@ export default function AdminCoursesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredCourses.map((course) => (
-                  <tr key={course._id} className="hover:bg-gray-50 transition-colors group">
+                {filteredCourses.map((course, idx) => (
+                  <tr key={course._id || idx} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <img 

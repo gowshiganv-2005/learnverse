@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -16,18 +16,28 @@ import {
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AdminLayout({ children }) {
+  const [mounted, setMounted] = useState(false);
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'admin')) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !loading && (!user || user.role !== 'admin')) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, mounted]);
 
-  if (loading) return <LoadingSpinner fullScreen />;
-  if (!user || user.role !== 'admin') return null;
+  if (!mounted || loading) {
+    return <LoadingSpinner fullScreen text={!mounted ? "Initializing Admin..." : "Loading Admin Profile..."} />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
 
   const menuItems = [
     { name: 'Overview', href: '/admin', icon: HiOutlineChartPie },
