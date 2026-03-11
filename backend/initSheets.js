@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const { initSheet } = require('./config/googleSheets');
 
 const setup = async () => {
