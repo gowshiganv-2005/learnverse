@@ -13,23 +13,45 @@ const cleanKey = (key) => {
 const rawKey = process.env.GOOGLE_PRIVATE_KEY;
 const formattedKey = cleanKey(rawKey);
 
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: formattedKey,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+let serviceAccountAuth = null;
+if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && formattedKey) {
+  try {
+    serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: formattedKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+  } catch (err) {
+    console.error('❌ Failed to initialize JWT Auth:', err.message);
+  }
+}
 
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+// Lazy initialize doc to prevent crash on load if ID is missing
+let doc = null;
+const getDoc = () => {
+  if (doc) return doc;
+  if (!process.env.GOOGLE_SHEET_ID) {
+    console.error('❌ GOOGLE_SHEET_ID is missing from environment variables');
+    throw new Error('GOOGLE_SHEET_ID is missing');
+  }
+  if (!serviceAccountAuth) {
+    console.error('❌ Google Auth not initialized. Check service account email and private key.');
+    throw new Error('Google Auth not initialized');
+  }
+  doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  return doc;
+};
 
-let isLoaded = false;
+let _isLoaded = false;
 
 const initSheet = async () => {
-  if (isLoaded) return doc;
+  if (_isLoaded) return doc;
   try {
-    await doc.loadInfo();
-    isLoaded = true;
-    console.log('✅ Google Sheets Connected:', doc.title);
-    return doc;
+    const d = getDoc();
+    await d.loadInfo();
+    _isLoaded = true;
+    console.log('✅ Google Sheets Connected:', d.title);
+    return d;
   } catch (error) {
     console.error('❌ Google Sheets Connection Error:', error.message);
     throw error;
@@ -37,8 +59,9 @@ const initSheet = async () => {
 };
 
 const getSheet = async (sheetTitle) => {
-  if (!isLoaded) await initSheet();
-  const sheet = doc.sheetsByTitle[sheetTitle];
+  if (!_isLoaded) await initSheet();
+  const d = getDoc();
+  const sheet = d.sheetsByTitle[sheetTitle];
   if (!sheet) {
     throw new Error(`Sheet with title "${sheetTitle}" not found in spreadsheet.`);
   }
@@ -96,6 +119,6 @@ module.exports = {
   addRow,
   updateRow,
   deleteRow,
-  isLoaded: () => isLoaded, // Export as a function to get real-time value
-  doc
+  isLoaded: () => _isLoaded,
+  getDoc
 };

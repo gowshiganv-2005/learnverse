@@ -5,12 +5,12 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-// Load environment variables locally
+// Node.js environment variables are handled automatically on Vercel
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
-const { initSheet, doc, isLoaded } = require('./config/googleSheets');
+const { initSheet, isLoaded, getDoc } = require('./config/googleSheets');
 const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
@@ -33,14 +33,16 @@ app.use(morgan('dev'));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Connect to Google Sheets immediately
-initSheet().catch(err => console.error('Sheet Init Failed:', err.message));
+// Proactive Connection (Non-Blocking)
+initSheet().catch(err => {
+  console.log('⚠️ Deferred sheet connection:', err.message);
+});
 
 // --- SPECIAL SEED ROUTE (Production Data Recovery) ---
 app.get('/api/admin/system-seed', async (req, res) => {
   try {
     const document = await initSheet();
-    console.log('Starting Force Seed...');
+    console.log('Force Seeding Started...');
     
     const sheets = {
       Users: document.sheetsByTitle['Users'],
@@ -49,19 +51,17 @@ app.get('/api/admin/system-seed', async (req, res) => {
     };
 
     if (!sheets.Courses || !sheets.Users) {
-      return res.status(500).json({ success: false, message: 'Required sheets not found. Initialization needed.' });
+      return res.status(500).json({ success: false, message: 'Google Spreadsheet is missing required tabs (Users/Courses).' });
     }
 
-    // Check if courses already exist
-    const currentCourses = await sheets.Courses.getRows();
-    if (currentCourses.length > 0) {
-      return res.json({ success: true, message: 'Database already contains data. Seed skipped to prevent duplicates.', count: currentCourses.length });
+    const currentRows = await sheets.Courses.getRows();
+    if (currentRows.length > 0) {
+      return res.json({ success: true, message: 'Data already exists in spreadsheet.', count: currentRows.length });
     }
 
     const salt = await bcrypt.genSalt(10);
     const adminPassword = await bcrypt.hash('admin123', salt);
     
-    // Seed Admin
     await sheets.Users.addRow({
       id: uuidv4(),
       name: 'Admin User',
@@ -75,12 +75,11 @@ app.get('/api/admin/system-seed', async (req, res) => {
       createdAt: new Date().toISOString()
     });
 
-    // Seed Courses
     const courseId = uuidv4();
     await sheets.Courses.addRow({
       id: courseId,
       title: 'Complete React & Next.js Masterclass 2024',
-      description: 'Master modern web development with React and Next.js.',
+      description: 'Master modern React/Next development.',
       shortDescription: 'The ultimate guide to modern web apps.',
       price: 89.99,
       category: 'Web Development',
@@ -93,13 +92,13 @@ app.get('/api/admin/system-seed', async (req, res) => {
       rating: 4.8,
       numReviews: 342,
       enrolledStudents: 2450,
-      whatYouWillLearn: JSON.stringify(['React Hooks', 'Next.js App Router', 'Server Components']),
-      requirements: JSON.stringify(['JavaScript Basics']),
-      modules: JSON.stringify([{ title: 'Introduction', lessons: [] }]),
+      whatYouWillLearn: JSON.stringify(['React Hooks', 'Next.js App Router']),
+      requirements: JSON.stringify(['JavaScript']),
+      modules: JSON.stringify([{ title: 'Intro', lessons: [] }]),
       createdAt: new Date().toISOString()
     });
 
-    res.json({ success: true, message: 'System re-seeded successfully with production starter content.' });
+    res.json({ success: true, message: 'Spreadsheet seeded successfully!' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -114,21 +113,29 @@ app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/progress', progressRoutes);
 
-// Enhanced Health Check
+// Health check with Environment Debug
 app.get('/api/health', (req, res) => {
+  let sheetInfo = "Not Init";
+  try {
+     const d = getDoc();
+     sheetInfo = d ? "Config Present" : "Doc Missing";
+  } catch (e) {
+     sheetInfo = e.message;
+  }
+
   res.json({
     success: true,
-    status: 'Operational',
+    status: 'Server Active',
     timestamp: new Date(),
-    database: {
-      type: 'Google Sheets',
-      connected: !!doc.title,
-      synced: isLoaded(),
-      id: process.env.GOOGLE_SHEET_ID ? 'Configured' : 'Missing'
+    sheets: {
+      status: sheetInfo,
+      synced: isLoaded()
     },
-    client: {
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'Using relative paths (Correct for Same-Origin)',
-      nodeEnv: process.env.NODE_ENV
+    env: {
+      has_sheet_id: !!process.env.GOOGLE_SHEET_ID,
+      has_service_email: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      has_private_key: !!process.env.GOOGLE_PRIVATE_KEY,
+      node_env: process.env.NODE_ENV
     }
   });
 });
@@ -137,13 +144,13 @@ app.get('/', (req, res) => {
   res.send('LearnVerse API is running securely.');
 });
 
-// Error Handler
+// Global Error Handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`🚀 LearnVerse API Server running on port ${PORT}`);
+    console.log(`🚀 LearnVerse API running on port ${PORT}`);
   });
 }
 
