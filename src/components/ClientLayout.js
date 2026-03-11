@@ -6,14 +6,28 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PageTransition from '@/components/PageTransition';
 import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function ClientLayout({ children }) {
+function LayoutContent({ children }) {
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isDashboardRoute = pathname.startsWith('/dashboard');
-  const isPlayerRoute = pathname.startsWith('/player');
+  
+  const isAdminRoute = pathname?.startsWith('/admin') || false;
+  const isDashboardRoute = pathname?.startsWith('/dashboard') || false;
+  const isPlayerRoute = pathname?.startsWith('/player') || false;
   const hideLayout = isPlayerRoute;
 
+  return (
+    <>
+      {!hideLayout && <Navbar />}
+      <main className={hideLayout ? '' : 'pt-[72px]'}>
+        <PageTransition>{children}</PageTransition>
+      </main>
+      {!hideLayout && !isAdminRoute && !isDashboardRoute && !isPlayerRoute && <Footer />}
+    </>
+  );
+}
+
+export default function ClientLayout({ children }) {
   return (
     <AuthProvider>
       <Toaster
@@ -37,11 +51,9 @@ export default function ClientLayout({ children }) {
           },
         }}
       />
-      {!hideLayout && <Navbar />}
-      <main className={hideLayout ? '' : 'pt-[72px]'}>
-        <PageTransition>{children}</PageTransition>
-      </main>
-      {!hideLayout && !isAdminRoute && !isDashboardRoute && !isPlayerRoute && <Footer />}
+      <Suspense fallback={null}>
+        <LayoutContent>{children}</LayoutContent>
+      </Suspense>
     </AuthProvider>
   );
 }
