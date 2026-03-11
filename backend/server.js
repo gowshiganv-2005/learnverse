@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-const { initSheet, doc } = require('./config/googleSheets');
+const { initSheet, doc, isLoaded } = require('./config/googleSheets');
 const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
@@ -17,7 +17,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 
 // Connect to Google Sheets
-initSheet().catch(err => console.error('Failed to init sheets:', err));
+initSheet().catch(err => console.error('Failed to init sheets:', err.message));
 
 const app = express();
 
@@ -45,7 +45,10 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'LearnVerse API is functional',
     timestamp: new Date(),
-    sheetsConnected: !!doc.title
+    sheetsConnected: !!doc.title,
+    synced: isLoaded(),
+    env: process.env.NODE_ENV,
+    sheetId: process.env.GOOGLE_SHEET_ID ? 'Configured' : 'Missing'
   });
 });
 

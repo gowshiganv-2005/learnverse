@@ -10,23 +10,36 @@ const parseCourse = (course) => {
   parsed.rating = Number(course.rating || 0);
   parsed.numReviews = Number(course.numReviews || 0);
   parsed.enrolledStudents = Number(course.enrolledStudents || 0);
-  parsed.featured = course.featured === 'TRUE' || course.featured === true;
-  parsed.published = course.published === 'TRUE' || course.published === true;
+
+  // Case-insensitive & Type-agnostic boolean check
+  const isTrue = (val) => {
+    if (val === undefined || val === null) return false;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const s = val.trim().toUpperCase();
+      return s === 'TRUE' || s === '1' || s === 'YES';
+    }
+    if (typeof val === 'number') return val === 1;
+    return !!val;
+  };
+
+  parsed.featured = isTrue(course.featured);
+  parsed.published = isTrue(course.published);
 
   try {
-    parsed.whatYouWillLearn = JSON.parse(course.whatYouWillLearn || '[]');
+    parsed.whatYouWillLearn = typeof course.whatYouWillLearn === 'string' ? JSON.parse(course.whatYouWillLearn || '[]') : (course.whatYouWillLearn || []);
   } catch (e) {
     parsed.whatYouWillLearn = [];
   }
 
   try {
-    parsed.requirements = JSON.parse(course.requirements || '[]');
+    parsed.requirements = typeof course.requirements === 'string' ? JSON.parse(course.requirements || '[]') : (course.requirements || []);
   } catch (e) {
     parsed.requirements = [];
   }
 
   try {
-    parsed.modules = JSON.parse(course.modules || '[]');
+    parsed.modules = typeof course.modules === 'string' ? JSON.parse(course.modules || '[]') : (course.modules || []);
   } catch (e) {
     parsed.modules = [];
   }

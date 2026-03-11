@@ -1,11 +1,17 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-// Configure Auth
+// Enhanced key cleaning for various environment (Vercel/Local/Docker)
+const cleanKey = (key) => {
+  if (!key) return null;
+  let k = key;
+  // Handle Vercel's potentially extra-quoted env vars
+  if (k.startsWith('"') && k.endsWith('"')) k = k.slice(1, -1);
+  return k.replace(/\\n/g, '\n').trim();
+};
+
 const rawKey = process.env.GOOGLE_PRIVATE_KEY;
-const formattedKey = rawKey?.startsWith('"') && rawKey?.endsWith('"') 
-  ? rawKey.slice(1, -1).replace(/\\n/g, '\n') 
-  : rawKey?.replace(/\\n/g, '\n');
+const formattedKey = cleanKey(rawKey);
 
 const serviceAccountAuth = new JWT({
   email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -25,7 +31,7 @@ const initSheet = async () => {
     console.log('✅ Google Sheets Connected:', doc.title);
     return doc;
   } catch (error) {
-    console.error('❌ Google Sheets Connection Error:', error);
+    console.error('❌ Google Sheets Connection Error:', error.message);
     throw error;
   }
 };
@@ -90,4 +96,6 @@ module.exports = {
   addRow,
   updateRow,
   deleteRow,
+  isLoaded: () => isLoaded, // Export as a function to get real-time value
+  doc
 };
