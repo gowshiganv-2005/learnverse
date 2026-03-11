@@ -13,7 +13,8 @@ import {
   HiChevronRight,
   HiCheckCircle,
   HiOutlineAcademicCap,
-  HiOutlineArrowLeft
+  HiOutlineArrowLeft,
+  HiOutlineViewGrid
 } from 'react-icons/hi';
 import API from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
@@ -21,7 +22,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 // Dynamic import for ReactPlayer to avoid hydration issues
-const ReactPlayer = dynamic(() => import('react-player/lazy'), { ssr: false });
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
 export default function CoursePlayerPage({ params }) {
   const { id } = use(params);
