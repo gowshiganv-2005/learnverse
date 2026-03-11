@@ -18,15 +18,18 @@ import {
 } from 'react-icons/hi';
 
 export default function Navbar() {
+  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -36,6 +39,21 @@ export default function Navbar() {
     setMobileOpen(false);
     setProfileOpen(false);
   }, [pathname]);
+
+  if (!mounted) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 h-[72px] bg-white/90 backdrop-blur-xl border-b border-gray-100 flex items-center">
+        <div className="container-main flex items-center justify-between">
+           <div className="flex items-center gap-2.5">
+             <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
+               <HiOutlineAcademicCap className="w-5 h-5 text-purple-600" />
+             </div>
+             <span className="text-xl font-bold text-gray-900">LearnVerse</span>
+           </div>
+        </div>
+      </nav>
+    );
+  }
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -127,6 +145,7 @@ export default function Navbar() {
                   <AnimatePresence>
                     {profileOpen && (
                       <motion.div
+                        key="profile-dropdown"
                         initial={{ opacity: 0, scale: 0.95, y: 8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -146,9 +165,9 @@ export default function Navbar() {
                             Dashboard
                           </Link>
                           <Link
-                            href="/dashboard/wishlist"
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                          >
+                             href="/dashboard/wishlist"
+                             className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                           >
                             <HiOutlineHeart className="w-4 h-4" />
                             Wishlist
                           </Link>
@@ -215,6 +234,7 @@ export default function Navbar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            key="mobile-nav"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

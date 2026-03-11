@@ -14,6 +14,13 @@ export const metadata = {
   keywords: 'online courses, learning platform, education, programming, design, business',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#6C5CE7',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>

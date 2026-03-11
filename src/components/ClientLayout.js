@@ -8,19 +8,10 @@ import PageTransition from '@/components/PageTransition';
 import { usePathname } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 
-function ClientLayoutInterior({ children }) {
+// This sub-component safely uses router hooks
+function ClientLayoutLogic({ children }) {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // During SSR or before hydration, use a placeholder
-  if (!mounted) {
-    return <main className="pt-[72px]">{children}</main>;
-  }
-
+  
   const isAdminRoute = pathname?.startsWith('/admin') || false;
   const isDashboardRoute = pathname?.startsWith('/dashboard') || false;
   const isPlayerRoute = pathname?.startsWith('/player') || false;
@@ -38,6 +29,12 @@ function ClientLayoutInterior({ children }) {
 }
 
 export default function ClientLayout({ children }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <AuthProvider>
       <Toaster
@@ -61,9 +58,17 @@ export default function ClientLayout({ children }) {
           },
         }}
       />
-      <Suspense fallback={<main className="pt-[72px]">{children}</main>}>
-        <ClientLayoutInterior>{children}</ClientLayoutInterior>
-      </Suspense>
+      {/* 
+          DANGER: Only render the logic that uses usePathname() after the component is mounted
+          and only inside a Suspense boundary. This prevents build-time router context errors.
+      */}
+      {mounted ? (
+        <Suspense fallback={<main className="pt-[72px]">{children}</main>}>
+          <ClientLayoutLogic>{children}</ClientLayoutLogic>
+        </Suspense>
+      ) : (
+        <main className="pt-[72px]">{children}</main>
+      )}
     </AuthProvider>
   );
 }

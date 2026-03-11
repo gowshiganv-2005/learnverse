@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HiOutlineAcademicCap } from 'react-icons/hi';
 import {
@@ -40,6 +41,14 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <footer className="bg-gray-50 border-t border-gray-100">
       <div className="container-main py-16">
@@ -73,11 +82,11 @@ export default function Footer() {
 
           {/* Link Columns */}
           {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
+            <div key={`col-${title}`}>
               <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">{title}</h3>
               <ul className="space-y-3">
                 {links.map((link) => (
-                  <li key={link.label}>
+                  <li key={`link-${link.label}`}>
                     <Link
                       href={link.href}
                       className="text-[0.9rem] text-gray-500 hover:text-[#6C5CE7] transition-colors"
