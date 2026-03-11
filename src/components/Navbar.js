@@ -40,7 +40,10 @@ export default function Navbar() {
     setProfileOpen(false);
   }, [pathname]);
 
-  if (!mounted) {
+  const isPlayerRoute = pathname?.startsWith('/player') || false;
+
+  if (!mounted || isPlayerRoute) {
+    if (isPlayerRoute) return null;
     return (
       <nav className="fixed top-0 left-0 right-0 z-50 h-[72px] bg-white/90 backdrop-blur-xl border-b border-gray-100 flex items-center">
         <div className="container-main flex items-center justify-between">

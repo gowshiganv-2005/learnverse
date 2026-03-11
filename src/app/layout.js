@@ -1,6 +1,10 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import ClientLayout from '@/components/ClientLayout';
+import { AuthProvider } from '@/context/AuthContext';
+import { Toaster } from 'react-hot-toast';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import PageTransition from '@/components/PageTransition';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,7 +29,28 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
-        <ClientLayout>{children}</ClientLayout>
+        <AuthProvider>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#fff',
+                color: '#1A1A2E',
+                borderRadius: '12px',
+                border: '1px solid #E5E7EB',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                padding: '14px 20px',
+                fontSize: '0.9rem',
+              },
+            }}
+          />
+          <Navbar />
+          <PageTransition>
+            {children}
+          </PageTransition>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { HiOutlineAcademicCap } from 'react-icons/hi';
 import {
   FaFacebookF,
@@ -42,12 +43,21 @@ const socialLinks = [
 
 export default function Footer() {
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
+
+  const isAdminRoute = pathname?.startsWith('/admin') || false;
+  const isDashboardRoute = pathname?.startsWith('/dashboard') || false;
+  const isPlayerRoute = pathname?.startsWith('/player') || false;
+
+  if (isAdminRoute || isDashboardRoute || isPlayerRoute) {
+    return null;
+  }
 
   return (
     <footer className="bg-gray-50 border-t border-gray-100">
