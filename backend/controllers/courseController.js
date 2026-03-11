@@ -4,12 +4,19 @@ const { getAllRows, findRow, addRow, updateRow, deleteRow } = require('../config
 // Helper to parse course data
 const parseCourse = (course) => {
   if (!course) return null;
-  const parsed = { ...course };
-  parsed._id = course.id;
-  parsed.price = Number(course.price || 0);
-  parsed.rating = Number(course.rating || 0);
-  parsed.numReviews = Number(course.numReviews || 0);
-  parsed.enrolledStudents = Number(course.enrolledStudents || 0);
+  
+  // Normalize keys to lowercase for spreadsheet column robustness
+  const raw = {};
+  Object.keys(course).forEach(key => {
+    raw[key.toLowerCase()] = course[key];
+  });
+
+  const parsed = { ...raw };
+  parsed._id = raw.id;
+  parsed.price = Number(raw.price || 0);
+  parsed.rating = Number(raw.rating || 0);
+  parsed.numReviews = Number(raw.numreviews || 0);
+  parsed.enrolledStudents = Number(raw.enrolledstudents || 0);
 
   // Case-insensitive & Type-agnostic boolean check
   const isTrue = (val) => {
@@ -23,8 +30,14 @@ const parseCourse = (course) => {
     return !!val;
   };
 
-  parsed.featured = isTrue(course.featured);
-  parsed.published = isTrue(course.published);
+  parsed.featured = isTrue(raw.featured);
+  parsed.published = isTrue(raw.published);
+  parsed.category = raw.category || 'Other';
+  parsed.title = raw.title || 'Untitled Course';
+  parsed.instructor = raw.instructor || 'Staff';
+  parsed.thumbnail = raw.thumbnail || '';
+  parsed.description = raw.description || '';
+  parsed.shortDescription = raw.shortdescription || '';
 
   try {
     parsed.whatYouWillLearn = typeof course.whatYouWillLearn === 'string' ? JSON.parse(course.whatYouWillLearn || '[]') : (course.whatYouWillLearn || []);
