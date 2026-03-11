@@ -107,9 +107,20 @@ exports.getMe = async (req, res) => {
     }
     
     const userData = userRow.toObject();
-    // Parse JSON strings back to objects
-    userData.wishlist = JSON.parse(userData.wishlist || '[]');
-    userData.purchasedCourses = JSON.parse(userData.purchasedCourses || '[]');
+    
+    // Parse JSON strings back to objects with safety
+    try {
+      userData.wishlist = JSON.parse(userData.wishlist || '[]');
+    } catch (e) {
+      userData.wishlist = [];
+    }
+
+    try {
+      userData.purchasedCourses = JSON.parse(userData.purchasedCourses || '[]');
+    } catch (e) {
+      userData.purchasedCourses = [];
+    }
+    
     userData._id = userData.id;
 
     res.json({ success: true, user: userData });

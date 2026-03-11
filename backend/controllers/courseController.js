@@ -6,15 +6,31 @@ const parseCourse = (course) => {
   if (!course) return null;
   const parsed = { ...course };
   parsed._id = course.id;
-  parsed.price = Number(course.price);
+  parsed.price = Number(course.price || 0);
   parsed.rating = Number(course.rating || 0);
   parsed.numReviews = Number(course.numReviews || 0);
   parsed.enrolledStudents = Number(course.enrolledStudents || 0);
   parsed.featured = course.featured === 'TRUE' || course.featured === true;
   parsed.published = course.published === 'TRUE' || course.published === true;
-  parsed.whatYouWillLearn = JSON.parse(course.whatYouWillLearn || '[]');
-  parsed.requirements = JSON.parse(course.requirements || '[]');
-  parsed.modules = JSON.parse(course.modules || '[]');
+
+  try {
+    parsed.whatYouWillLearn = JSON.parse(course.whatYouWillLearn || '[]');
+  } catch (e) {
+    parsed.whatYouWillLearn = [];
+  }
+
+  try {
+    parsed.requirements = JSON.parse(course.requirements || '[]');
+  } catch (e) {
+    parsed.requirements = [];
+  }
+
+  try {
+    parsed.modules = JSON.parse(course.modules || '[]');
+  } catch (e) {
+    parsed.modules = [];
+  }
+  
   return parsed;
 };
 

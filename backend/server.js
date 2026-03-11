@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-const { initSheet } = require('./config/googleSheets');
+const { initSheet, doc } = require('./config/googleSheets');
 const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
@@ -41,7 +41,12 @@ app.use('/api/progress', progressRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'LearnVerse API is running', timestamp: new Date() });
+  res.json({
+    success: true,
+    message: 'LearnVerse API is functional',
+    timestamp: new Date(),
+    sheetsConnected: !!doc.title
+  });
 });
 
 app.get('/', (req, res) => {

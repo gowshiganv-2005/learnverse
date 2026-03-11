@@ -2,17 +2,26 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 // Configure Auth
+const rawKey = process.env.GOOGLE_PRIVATE_KEY;
+const formattedKey = rawKey?.startsWith('"') && rawKey?.endsWith('"') 
+  ? rawKey.slice(1, -1).replace(/\\n/g, '\n') 
+  : rawKey?.replace(/\\n/g, '\n');
+
 const serviceAccountAuth = new JWT({
   email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  key: formattedKey,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
 
+let isLoaded = false;
+
 const initSheet = async () => {
+  if (isLoaded) return doc;
   try {
     await doc.loadInfo();
+    isLoaded = true;
     console.log('✅ Google Sheets Connected:', doc.title);
     return doc;
   } catch (error) {
@@ -22,8 +31,12 @@ const initSheet = async () => {
 };
 
 const getSheet = async (sheetTitle) => {
-  await doc.loadInfo();
-  return doc.sheetsByTitle[sheetTitle];
+  if (!isLoaded) await initSheet();
+  const sheet = doc.sheetsByTitle[sheetTitle];
+  if (!sheet) {
+    throw new Error(`Sheet with title "${sheetTitle}" not found in spreadsheet.`);
+  }
+  return sheet;
 };
 
 // Generic CRUD operations
