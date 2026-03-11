@@ -44,11 +44,19 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'LearnVerse API is running', timestamp: new Date() });
 });
 
+app.get('/', (req, res) => {
+  res.send('LearnVerse API is running securely.');
+});
+
 // Error Handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 LearnVerse API Server running on port ${PORT}`);
-  console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 LearnVerse API Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
