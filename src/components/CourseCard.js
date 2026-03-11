@@ -78,9 +78,9 @@ export default function CourseCard({ course, index = 0, onWishlistToggle, isWish
               <div className="flex items-center gap-0.5">
                 {[...Array(5)].map((_, i) => (
                   i < Math.floor(course.rating || 0) ? (
-                    <HiStar key={`c-star-full-${i}`} className="w-4 h-4 text-amber-400" />
+                    <HiStar key={`c-${course._id}-full-${i}`} className="w-4 h-4 text-amber-400" />
                   ) : (
-                    <HiOutlineStar key={`c-star-empty-${i}`} className="w-4 h-4 text-amber-400" />
+                    <HiOutlineStar key={`c-${course._id}-empty-${i}`} className="w-4 h-4 text-amber-400" />
                   )
                 ))}
               </div>

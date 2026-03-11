@@ -1,10 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { HiOutlineArrowLeft, HiOutlineAcademicCap } from 'react-icons/hi';
 
 export default function NotFound() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 bg-white">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-[#6C5CE7]">404</h1>
+          <p className="text-gray-500 mt-2">Page Not Found</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 bg-white">
       <div className="max-w-md w-full text-center">

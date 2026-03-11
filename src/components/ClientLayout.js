@@ -6,11 +6,21 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PageTransition from '@/components/PageTransition';
 import { usePathname } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 
-function LayoutContent({ children }) {
+function ClientLayoutInterior({ children }) {
   const pathname = usePathname();
-  
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // During SSR or before hydration, use a placeholder
+  if (!mounted) {
+    return <main className="pt-[72px]">{children}</main>;
+  }
+
   const isAdminRoute = pathname?.startsWith('/admin') || false;
   const isDashboardRoute = pathname?.startsWith('/dashboard') || false;
   const isPlayerRoute = pathname?.startsWith('/player') || false;
@@ -51,8 +61,8 @@ export default function ClientLayout({ children }) {
           },
         }}
       />
-      <Suspense fallback={null}>
-        <LayoutContent>{children}</LayoutContent>
+      <Suspense fallback={<main className="pt-[72px]">{children}</main>}>
+        <ClientLayoutInterior>{children}</ClientLayoutInterior>
       </Suspense>
     </AuthProvider>
   );
