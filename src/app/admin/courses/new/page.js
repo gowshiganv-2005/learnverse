@@ -18,6 +18,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 export default function CourseFormPage({ params }) {
+  const [mounted, setMounted] = useState(false);
   const isEdit = params?.id !== undefined;
   const router = useRouter();
   const [loading, setLoading] = useState(isEdit);
@@ -41,6 +42,7 @@ export default function CourseFormPage({ params }) {
   });
 
   useEffect(() => {
+    setMounted(true);
     if (isEdit) {
       fetchCourse();
     }
@@ -53,8 +55,10 @@ export default function CourseFormPage({ params }) {
         setFormData(data.course);
       }
     } catch (err) {
-      toast.error('Failed to load course details');
-      router.push('/admin/courses');
+      if (typeof window !== 'undefined') {
+        toast.error('Failed to load course details');
+        router.push('/admin/courses');
+      }
     } finally {
       setLoading(false);
     }
@@ -112,7 +116,9 @@ export default function CourseFormPage({ params }) {
     }
   };
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (!mounted || loading) {
+    return <LoadingSpinner fullScreen text={!mounted ? "Loading Editor..." : "Fetching Course Data..."} />;
+  }
 
   return (
     <div className="space-y-8 pb-20">
@@ -292,8 +298,8 @@ export default function CourseFormPage({ params }) {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Course Price (USD)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">$</span>
-                  <input
+                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">$</span>
+                   <input
                     type="number"
                     name="price"
                     value={formData.price}
@@ -357,9 +363,9 @@ export default function CourseFormPage({ params }) {
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="checkbox"
-                    name="featured"
+                    name="name"
                     checked={formData.featured}
-                    onChange={handleInputChange}
+                    onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
                     className="w-5 h-5 rounded-lg border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7] transition-all"
                   />
                   <div className="flex-1">

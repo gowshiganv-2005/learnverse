@@ -16,6 +16,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
 export default function EditCoursePage({ params }) {
+  const [mounted, setMounted] = useState(false);
   const { id } = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -39,6 +40,7 @@ export default function EditCoursePage({ params }) {
   });
 
   useEffect(() => {
+    setMounted(true);
     fetchCourse();
   }, [id]);
 
@@ -49,8 +51,10 @@ export default function EditCoursePage({ params }) {
         setFormData(data.course);
       }
     } catch (err) {
-      toast.error('Failed to load course details');
-      router.push('/admin/courses');
+      if (typeof window !== 'undefined') {
+        toast.error('Failed to load course details');
+        router.push('/admin/courses');
+      }
     } finally {
       setLoading(false);
     }
@@ -93,11 +97,9 @@ export default function EditCoursePage({ params }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await API.put(`/courses/${id}`, formData);
-      if (data.success) {
-        toast.success('Course updated successfully!');
-        router.push('/admin/courses');
-      }
+       await API.put(`/courses/${id}`, formData);
+       toast.success('Course updated successfully!');
+       router.push('/admin/courses');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update course');
     } finally {
@@ -105,7 +107,9 @@ export default function EditCoursePage({ params }) {
     }
   };
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (!mounted || loading) {
+    return <LoadingSpinner fullScreen text={!mounted ? "Loading Editor..." : "Fetching Course Details..."} />;
+  }
 
   return (
     <div className="space-y-8 pb-20">
@@ -166,9 +170,6 @@ export default function EditCoursePage({ params }) {
                  </div>
                ))}
              </div>
-             <p className="text-[10px] text-gray-400 mt-4 uppercase font-bold tracking-widest text-center py-4 border-t border-dashed border-gray-200">
-               Manage specific video lessons in the lesson manager.
-             </p>
           </section>
 
           <section className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
