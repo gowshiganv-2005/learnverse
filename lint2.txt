@@ -1,0 +1,231 @@
+
+> learnverse@0.1.0 lint
+> eslint
+
+
+D:\Documents\projects\samples\eleraning\src\app\admin\courses\edit\[id]\page.js
+   45:6    warning  React Hook useEffect has a missing dependency: 'fetchCourse'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  125:83   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                 react/no-unescaped-entities
+  125:100  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                 react/no-unescaped-entities
+  178:99   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                 react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\admin\courses\new\page.js
+   49:6   warning  React Hook useEffect has a missing dependency: 'fetchCourse'. Either include it or remove the dependency array                                                                                                                                                                           react-hooks/exhaustive-deps
+  254:99  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  330:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\Documents\projects\samples\eleraning\src\app\admin\courses\page.js
+  112:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\Documents\projects\samples\eleraning\src\app\admin\layout.js
+  25:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  23 |
+  24 |   useEffect(() => {
+> 25 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  26 |   }, []);
+  27 |
+  28 |   useEffect(() => {  react-hooks/set-state-in-effect
+
+D:\Documents\projects\samples\eleraning\src\app\admin\lessons\[id]\page.js
+   34:6   warning  React Hook useEffect has a missing dependency: 'fetchCourseAndLessons'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  100:75  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                           react/no-unescaped-entities
+  100:91  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                           react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\courses\[id]\page.js
+   34:6   warning  React Hook useEffect has missing dependencies: 'fetchCourse' and 'fetchReviews'. Either include them or remove the dependency array                                                                                                                                                      react-hooks/exhaustive-deps
+  186:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  261:78  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\courses\page.js
+   30:6   warning  React Hook useEffect has a missing dependency: 'fetchCourses'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  225:17  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                  react/no-unescaped-entities
+  225:34  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                  react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\dashboard\layout.js
+  25:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  23 |
+  24 |   useEffect(() => {
+> 25 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  26 |   }, []);
+  27 |
+  28 |   useEffect(() => {  react-hooks/set-state-in-effect
+
+D:\Documents\projects\samples\eleraning\src\app\dashboard\page.js
+  53:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  96:22  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\dashboard\profile\page.js
+  65:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\Documents\projects\samples\eleraning\src\app\dashboard\wishlist\page.js
+  52:54  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\global-error.js
+  31:13  error  Do not use an `<a>` element to navigate to `/`. Use `<Link />` from `next/link` instead. See: https://nextjs.org/docs/messages/no-html-link-for-pages  @next/next/no-html-link-for-pages
+
+D:\Documents\projects\samples\eleraning\src\app\login\page.js
+  112:14  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+D:\Documents\projects\samples\eleraning\src\app\page.js
+   71:5   error    Error: Cannot access variable before it is declared
+
+`fetchFeatured` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  69 |
+  70 |   useEffect(() => {
+> 71 |     fetchFeatured();
+     |     ^^^^^^^^^^^^^ `fetchFeatured` accessed before it is declared
+  72 |     fetchCategories();
+  73 |   }, []);
+  74 |
+
+  73 |   }, []);
+  74 |
+> 75 |   const fetchFeatured = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 76 |     try {
+     | ^^^^^^^^^
+> 77 |       const { data } = await API.get('/courses/featured');
+     | ^^^^^^^^^
+> 78 |       if (data.success) setFeaturedCourses(data.courses);
+     | ^^^^^^^^^
+> 79 |     } catch (err) {
+     | ^^^^^^^^^
+> 80 |       console.error('Failed to fetch featured courses');
+     | ^^^^^^^^^
+> 81 |     }
+     | ^^^^^^^^^
+> 82 |   };
+     | ^^^^^ `fetchFeatured` is declared here
+  83 |
+  84 |   const fetchCategories = async () => {
+  85 |     try {                                        react-hooks/immutability
+   72:5   error    Error: Cannot access variable before it is declared
+
+`fetchCategories` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  70 |   useEffect(() => {
+  71 |     fetchFeatured();
+> 72 |     fetchCategories();
+     |     ^^^^^^^^^^^^^^^ `fetchCategories` accessed before it is declared
+  73 |   }, []);
+  74 |
+  75 |   const fetchFeatured = async () => {
+
+  82 |   };
+  83 |
+> 84 |   const fetchCategories = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 85 |     try {
+     | ^^^^^^^^^
+> 86 |       const { data } = await API.get('/courses/categories');
+     | ^^^^^^^^^
+> 87 |       if (data.success) setCategories(data.categories);
+     | ^^^^^^^^^
+> 88 |     } catch (err) {
+     | ^^^^^^^^^
+> 89 |       console.error('Failed to fetch categories');
+     | ^^^^^^^^^
+> 90 |     }
+     | ^^^^^^^^^
+> 91 |   };
+     | ^^^^^ `fetchCategories` is declared here
+  92 |
+  93 |   return (
+  94 |     <div className="overflow-hidden">  react-hooks/immutability
+  193:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @next/next/no-img-element
+
+D:\Documents\projects\samples\eleraning\src\app\player\[id]\page.js
+  47:6  warning  React Hook useEffect has a missing dependency: 'fetchCourseData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Documents\projects\samples\eleraning\src\components\CourseCard.js
+  20:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\Documents\projects\samples\eleraning\src\components\Footer.js
+  49:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  47 |
+  48 |   useEffect(() => {
+> 49 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  50 |   }, []);
+  51 |
+  52 |   if (!mounted) return null;  react-hooks/set-state-in-effect
+
+D:\Documents\projects\samples\eleraning\src\components\Navbar.js
+  32:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  30 |
+  31 |   useEffect(() => {
+> 32 |     setMounted(true);
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |     const handleScroll = () => setScrolled(window.scrollY > 20);
+  34 |     window.addEventListener('scroll', handleScroll);
+  35 |     return () => window.removeEventListener('scroll', handleScroll);  react-hooks/set-state-in-effect
+  39:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  37 |
+  38 |   useEffect(() => {
+> 39 |     setMobileOpen(false);
+     |     ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  40 |     setProfileOpen(false);
+  41 |   }, [pathname]);
+  42 |                                                                                                                                         react-hooks/set-state-in-effect
+
+D:\Documents\projects\samples\eleraning\src\components\PageTransition.js
+  30:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  28 |
+  29 |   useEffect(() => {
+> 30 |     setIsMounted(true);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  31 |   }, []);
+  32 |
+  33 |   // Hydration guard: Only render Framer Motion logic on the client  react-hooks/set-state-in-effect
+
+D:\Documents\projects\samples\eleraning\src\components\Testimonials.js
+  62:80  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  62:92  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+✖ 36 problems (23 errors, 13 warnings)
+

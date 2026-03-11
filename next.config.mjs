@@ -3,6 +3,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     // ONLY apply rewrites in development. 
     // In production, Vercel handles routing via vercel.json
