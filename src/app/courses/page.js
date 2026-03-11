@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import API from '@/utils/api';
@@ -9,7 +9,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { categories as categoryList } from '@/utils/helpers';
 import { HiOutlineSearch, HiOutlineFilter, HiOutlineX } from 'react-icons/hi';
 
-export default function CoursesPage() {
+function CoursesContent() {
   const searchParams = useSearchParams();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -292,5 +292,13 @@ export default function CoursesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CoursesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner fullScreen text="Loading courses..." />}>
+      <CoursesContent />
+    </Suspense>
   );
 }

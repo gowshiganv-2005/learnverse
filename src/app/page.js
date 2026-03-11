@@ -162,7 +162,7 @@ export default function HomePage() {
                   <p className="text-2xl font-bold text-gray-900">4.9</p>
                   <div className="flex items-center gap-1 mt-0.5">
                     {[...Array(5)].map((_, i) => (
-                      <HiOutlineStar key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                      <HiOutlineStar key={`h-star-${i}`} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                     ))}
                   </div>
                   <p className="text-xs text-gray-400 mt-1">Platform Rating</p>

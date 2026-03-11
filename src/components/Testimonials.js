@@ -56,7 +56,7 @@ export default function Testimonials() {
             >
               <div className="flex items-center gap-1 mb-4">
                 {[...Array(t.rating)].map((_, j) => (
-                  <HiStar key={j} className="w-5 h-5 text-amber-400" />
+                  <HiStar key={`star-${j}`} className="w-5 h-5 text-amber-400" />
                 ))}
               </div>
               <p className="text-gray-600 leading-relaxed mb-6 text-[0.95rem]">"{t.content}"</p>

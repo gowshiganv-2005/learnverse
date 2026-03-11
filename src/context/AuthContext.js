@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     try {
+      if (typeof window === 'undefined') return;
       const token = localStorage.getItem('token');
       if (!token) {
         setLoading(false);
