@@ -18,10 +18,13 @@ export default function CourseCard({ course, index = 0, onWishlistToggle, isWish
           {/* Thumbnail */}
           <div className="relative overflow-hidden aspect-video">
             <img
-              src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
+              src={course.thumbnail && course.thumbnail.startsWith('http') ? course.thumbnail : 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
               alt={course.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1454165833221-d8d03a647d7a?w=800';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 

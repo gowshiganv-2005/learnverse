@@ -22,6 +22,7 @@ let doc = null;
 const getDoc = () => {
   if (doc) return doc;
   if (!process.env.GOOGLE_SHEET_ID) {
+    console.error('❌ GOOGLE_SHEET_ID missing');
     throw new Error('GOOGLE_SHEET_ID is missing');
   }
   doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
@@ -35,12 +36,13 @@ const initSheet = async () => {
   try {
     const d = getDoc();
     if (!creds.client_email || !creds.private_key) {
+      console.error('❌ Auth credentials missing');
       throw new Error('Google Auth Credentials missing');
     }
     await d.useServiceAccountAuth(creds);
     await d.loadInfo();
     _isLoaded = true;
-    console.log('✅ Google Sheets Connected (v3):', d.title);
+    console.log('✅ Google Sheets V3 Connected:', d.title);
     return d;
   } catch (error) {
     console.error('❌ Google Sheets Connection Error:', error.message);
@@ -53,86 +55,124 @@ const getSheet = async (sheetTitle) => {
   const d = getDoc();
   const sheet = d.sheetsByTitle[sheetTitle];
   if (!sheet) {
-    throw new Error(`Sheet with title "${sheetTitle}" not found in spreadsheet.`);
+    throw new Error(`Sheet "${sheetTitle}" not found.`);
   }
   return sheet;
 };
 
+/**
+ * Robust Row Wrapper for v3/v4/v5 compatibility
+ */
+const wrapRow = (row, sheet) => {
+  if (!row) return null;
+  
+  const data = {};
+  // Google Sheets v3 often puts data in indexed properties or lowercase properties
+  // We'll iterate the headers to be sure
+  if (sheet.headerValues) {
+    sheet.headerValues.forEach(header => {
+      data[header] = row[header];
+      // Also provide lowercase access for robustness
+      data[header.toLowerCase()] = row[header];
+    });
+  }
+
+  // Fallback for metadata
+  if (!data.id && row.id) data.id = row.id;
+  if (!data._id && row.id) data._id = row.id;
+
+  // Create the rich object
+  const wrapped = { ...data };
+  
+  // v4/v5 Function compatibility
+  wrapped.get = function(key) {
+    if (!key) return null;
+    const k = key.toLowerCase();
+    return this[k] !== undefined ? this[k] : this[key];
+  };
+
+  wrapped.set = function(key, value) {
+    this[key] = value;
+    row[key] = value;
+  };
+
+  wrapped.save = async function() {
+    try { await row.save(); } catch (err) { console.error('Save failed:', err.message); throw err; }
+  };
+
+  wrapped.delete = async function() {
+    try {
+      await row.delete();
+    } catch (err) {
+      console.error('Row delete failed:', err.message);
+      throw err;
+    }
+  };
+
+  wrapped.toObject = function() {
+    const plain = {};
+    Object.keys(this).forEach(k => {
+      if (typeof this[k] !== 'function') plain[k] = this[k];
+    });
+    return plain;
+  };
+
+  if (!wrapped.id && row.id) wrapped.id = row.id;
+  if (!wrapped._id && row.id) wrapped._id = row.id;
+
+  return wrapped;
+};
+
 // Generic CRUD operations
 const getAllRows = async (sheetTitle) => {
-  const sheet = await getSheet(sheetTitle);
-  const rows = await sheet.getRows();
-  // In v3, rows have the data in a cleaner way if we use toObject if it exists, 
-  // but usually we just map headers.
-  return rows.map(row => {
-    // V3 row property access
-    const obj = {};
-    sheet.headerValues.forEach(header => {
-      obj[header] = row[header];
-    });
-    return obj;
-  });
+  try {
+    const sheet = await getSheet(sheetTitle);
+    const rows = await sheet.getRows();
+    return (rows || []).map(row => wrapRow(row, sheet));
+  } catch (err) {
+    console.error(`Error in getAllRows:`, err.message);
+    return [];
+  }
 };
 
 const findRow = async (sheetTitle, filterFn) => {
-  const sheet = await getSheet(sheetTitle);
-  const rows = await sheet.getRows();
-  const row = rows.find(row => {
-    const obj = {};
-    sheet.headerValues.forEach(header => {
-      obj[header] = row[header];
-    });
-    return filterFn(obj);
-  });
-  return row;
+  try {
+    const sheet = await getSheet(sheetTitle);
+    const rows = await sheet.getRows();
+    if (!rows) return null;
+    
+    for (const row of rows) {
+      const wrapped = wrapRow(row, sheet);
+      if (typeof filterFn === 'function' && filterFn(wrapped)) return wrapped;
+    }
+  } catch (err) {
+    console.error(`Error in findRow:`, err.message);
+  }
+  return null;
 };
 
 const addRow = async (sheetTitle, data) => {
   const sheet = await getSheet(sheetTitle);
   const newRow = await sheet.addRow(data);
-  const obj = {};
-  sheet.headerValues.forEach(header => {
-    obj[header] = newRow[header];
-  });
-  return obj;
+  return wrapRow(newRow, sheet);
 };
 
 const updateRow = async (sheetTitle, filterFn, updateData) => {
-  const sheet = await getSheet(sheetTitle);
-  const rows = await sheet.getRows();
-  const row = rows.find(row => {
-    const obj = {};
-    sheet.headerValues.forEach(header => {
-      obj[header] = row[header];
-    });
-    return filterFn(obj);
-  });
-  
+  const row = await findRow(sheetTitle, filterFn);
   if (row) {
-    Object.assign(row, updateData);
-    await row.save();
-    const obj = {};
-    sheet.headerValues.forEach(header => {
-      obj[header] = row[header];
+    Object.keys(updateData).forEach(key => {
+      row.set(key, updateData[key]);
     });
-    return obj;
+    await row.save();
+    return row;
   }
   return null;
 };
 
 const deleteRow = async (sheetTitle, filterFn) => {
-  const sheet = await getSheet(sheetTitle);
-  const rows = await sheet.getRows();
-  const index = rows.findIndex(row => {
-    const obj = {};
-    sheet.headerValues.forEach(header => {
-      obj[header] = row[header];
-    });
-    return filterFn(obj);
-  });
-
-  if (index !== -1) {
-    await rows[index].delete();
+  const row = await findRow(sheetTitle, filterFn);
+  if (row) {
+    await row.delete();
     return true;
   }
   return false;
