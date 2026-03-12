@@ -7,11 +7,11 @@ try {
   
   app = (req, res) => {
     if (req.url.includes('inspect-server')) {
-      const content = fs.existsSync(serverPath) 
-        ? fs.readFileSync(serverPath, 'utf8').substring(0, 500)
-        : 'File not found at ' + serverPath;
+      const content = fs.existsSync(serverPath) ? fs.readFileSync(serverPath, 'utf8') : '';
+      const hasUuid = content.includes("uuid");
+      const lines = content.split('\n').slice(0, 20).join('\n');
       res.setHeader('Content-Type', 'text/plain');
-      return res.end('DEBUG CONTENT:\n' + content);
+      return res.end('HAS UUID: ' + hasUuid + '\n\nCONTENT:\n' + lines);
     }
 
     try {
