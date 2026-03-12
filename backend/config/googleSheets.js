@@ -1,5 +1,4 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
 
 // Enhanced key cleaning for various environment (Vercel/Local/Docker)
 const cleanKey = (key) => {
@@ -13,32 +12,19 @@ const cleanKey = (key) => {
 const rawKey = process.env.GOOGLE_PRIVATE_KEY;
 const formattedKey = cleanKey(rawKey);
 
-let serviceAccountAuth = null;
-if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && formattedKey) {
-  try {
-    serviceAccountAuth = new JWT({
-      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: formattedKey,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-  } catch (err) {
-    console.error('❌ Failed to initialize JWT Auth:', err.message);
-  }
-}
+const creds = {
+  client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  private_key: formattedKey,
+};
 
-// Lazy initialize doc to prevent crash on load if ID is missing
+// Lazy initialize doc
 let doc = null;
 const getDoc = () => {
   if (doc) return doc;
   if (!process.env.GOOGLE_SHEET_ID) {
-    console.error('❌ GOOGLE_SHEET_ID is missing from environment variables');
     throw new Error('GOOGLE_SHEET_ID is missing');
   }
-  if (!serviceAccountAuth) {
-    console.error('❌ Google Auth not initialized. Check service account email and private key.');
-    throw new Error('Google Auth not initialized');
-  }
-  doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
   return doc;
 };
 
@@ -48,9 +34,13 @@ const initSheet = async () => {
   if (_isLoaded) return doc;
   try {
     const d = getDoc();
+    if (!creds.client_email || !creds.private_key) {
+      throw new Error('Google Auth Credentials missing');
+    }
+    await d.useServiceAccountAuth(creds);
     await d.loadInfo();
     _isLoaded = true;
-    console.log('✅ Google Sheets Connected:', d.title);
+    console.log('✅ Google Sheets Connected (v3):', d.title);
     return d;
   } catch (error) {
     console.error('❌ Google Sheets Connection Error:', error.message);
@@ -72,30 +62,60 @@ const getSheet = async (sheetTitle) => {
 const getAllRows = async (sheetTitle) => {
   const sheet = await getSheet(sheetTitle);
   const rows = await sheet.getRows();
-  return rows.map(row => row.toObject());
+  // In v3, rows have the data in a cleaner way if we use toObject if it exists, 
+  // but usually we just map headers.
+  return rows.map(row => {
+    // V3 row property access
+    const obj = {};
+    sheet.headerValues.forEach(header => {
+      obj[header] = row[header];
+    });
+    return obj;
+  });
 };
 
 const findRow = async (sheetTitle, filterFn) => {
   const sheet = await getSheet(sheetTitle);
   const rows = await sheet.getRows();
-  const row = rows.find(filterFn);
+  const row = rows.find(row => {
+    const obj = {};
+    sheet.headerValues.forEach(header => {
+      obj[header] = row[header];
+    });
+    return filterFn(obj);
+  });
   return row;
 };
 
 const addRow = async (sheetTitle, data) => {
   const sheet = await getSheet(sheetTitle);
   const newRow = await sheet.addRow(data);
-  return newRow.toObject();
+  const obj = {};
+  sheet.headerValues.forEach(header => {
+    obj[header] = newRow[header];
+  });
+  return obj;
 };
 
 const updateRow = async (sheetTitle, filterFn, updateData) => {
   const sheet = await getSheet(sheetTitle);
   const rows = await sheet.getRows();
-  const row = rows.find(filterFn);
+  const row = rows.find(row => {
+    const obj = {};
+    sheet.headerValues.forEach(header => {
+      obj[header] = row[header];
+    });
+    return filterFn(obj);
+  });
+  
   if (row) {
     Object.assign(row, updateData);
     await row.save();
-    return row.toObject();
+    const obj = {};
+    sheet.headerValues.forEach(header => {
+      obj[header] = row[header];
+    });
+    return obj;
   }
   return null;
 };
@@ -103,7 +123,14 @@ const updateRow = async (sheetTitle, filterFn, updateData) => {
 const deleteRow = async (sheetTitle, filterFn) => {
   const sheet = await getSheet(sheetTitle);
   const rows = await sheet.getRows();
-  const index = rows.findIndex(filterFn);
+  const index = rows.findIndex(row => {
+    const obj = {};
+    sheet.headerValues.forEach(header => {
+      obj[header] = row[header];
+    });
+    return filterFn(obj);
+  });
+
   if (index !== -1) {
     await rows[index].delete();
     return true;
